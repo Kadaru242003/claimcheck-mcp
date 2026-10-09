@@ -1,0 +1,26 @@
+name: ci
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.11", "3.12", "3.13"]
+    env:
+      # Integration tests must run here: a failed task download or a missing Docker
+      # daemon is a failure in CI, not a skip.
+      CLAIMCHECK_MCP_STRICT: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - run: pip install -e ".[test]"
+      - name: Unit tests (Docker mocked)
+        run: python -m pytest -q -m "not integration"
+      - name: Integration tests (real tasks, real Docker sandbox)
+        run: python -m pytest -q -m integration -rs
