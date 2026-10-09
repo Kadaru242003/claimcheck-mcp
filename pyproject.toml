@@ -1,0 +1,32 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "claimcheck-mcp"
+version = "0.1.0"
+description = "MCP server that lets an AI agent work on claimcheck benchmark tasks without seeing ground truth."
+readme = "README.md"
+requires-python = ">=3.11"
+license = "MIT"
+dependencies = [
+    # FastMCP lives at mcp.server.fastmcp in the 1.x SDK; 2.x renamed it.
+    "mcp>=1.10,<2",
+    # Pinned to the same commit as CLAIMCHECK_COMMIT in src/claimcheck_mcp/tasks.py.
+    "claimcheck @ git+https://github.com/Kadaru242003/claimcheck@c6fb84c0d8a4011f0d70ddabb079ba1935283654",
+]
+
+[project.optional-dependencies]
+test = ["pytest>=8", "anyio>=4"]
+
+[project.scripts]
+claimcheck-mcp = "claimcheck_mcp.server:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+    "integration: needs network (task download) and/or a running Docker daemon",
+]
