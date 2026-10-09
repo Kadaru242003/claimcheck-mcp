@@ -12,6 +12,7 @@ license = "MIT"
 dependencies = [
     # FastMCP lives at mcp.server.fastmcp in the 1.x SDK; 2.x renamed it.
     "mcp>=1.10,<2",
+    "typing_extensions>=4.7",
     # Pinned to the same commit as CLAIMCHECK_COMMIT in src/claimcheck_mcp/tasks.py.
     "claimcheck @ git+https://github.com/Kadaru242003/claimcheck@c6fb84c0d8a4011f0d70ddabb079ba1935283654",
 ]

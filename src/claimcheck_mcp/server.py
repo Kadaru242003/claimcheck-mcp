@@ -5,7 +5,10 @@ import argparse
 import sys
 from functools import lru_cache
 from pathlib import Path
-from typing import Literal, TypedDict
+from typing import Literal
+
+# pydantic requires typing_extensions.TypedDict on Python < 3.12.
+from typing_extensions import TypedDict
 
 from mcp.server.fastmcp import FastMCP
 
