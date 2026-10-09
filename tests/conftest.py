@@ -72,6 +72,7 @@ class FakeDocker:
         self.daemon_up = daemon_up
         self.calls = []
         self.mounted_files = []  # files visible in /work for each `docker run`
+        self.mounted_text = []   # their combined contents, for each `docker run`
         self._real_run = subprocess.run
 
     def __call__(self, cmd, *args, **kwargs):
@@ -98,6 +99,7 @@ class FakeDocker:
         mounts = {cmd[i + 1].split(":")[1]: cmd[i + 1].split(":")[0] for i, a in enumerate(cmd) if a == "-v"}
         work, out = Path(mounts["/work"]), Path(mounts["/out"])
         self.mounted_files.append(sorted(p.name for p in work.rglob("*") if p.is_file()))
+        self.mounted_text.append("\n".join(p.read_text(errors="replace") for p in work.rglob("*") if p.is_file()))
         py_args = cmd[cmd.index("python") + 1:]
         py_args = [a.replace("/out/", f"{out}/") if a.startswith("--junitxml") else a for a in py_args]
         py_args = [str(work) if a == "/work" else a for a in py_args]

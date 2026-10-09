@@ -45,6 +45,12 @@ def test_real_tasks_are_listed(real_checkout):
     assert {len(store.list(c)) for c in ("solvable", "impossible", "broken_env")} == {102, 54, 49}
 
 
+def test_real_tasks_pass_the_sandbox_safety_check(real_checkout):
+    """No real task has a symlink or a case-variant ground-truth file, so none is refused."""
+    for task in server.store().list():
+        sandbox.check_task_dir(server.store().task_dir(task["task_id"]))
+
+
 def test_real_tasks_never_expose_ground_truth(real_checkout):
     """Every get_task result is free of every task's reference.py and meta.json content."""
     tasks = real_checkout / "tasks"

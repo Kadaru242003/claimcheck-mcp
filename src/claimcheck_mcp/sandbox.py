@@ -13,10 +13,33 @@ from pathlib import Path
 from claimcheck import grading
 
 MAX_CODE_BYTES = 200_000
+GROUND_TRUTH = {"reference.py", "meta.json"}
 
 
 class DockerUnavailable(RuntimeError):
     pass
+
+
+class UnsafeTask(RuntimeError):
+    pass
+
+
+def check_task_dir(task_dir: Path) -> None:
+    """Refuse a task folder whose copy could carry ground truth into the container.
+
+    grade() copies the folder with shutil.copytree, which follows symlinks, and skips only
+    files named exactly reference.py and meta.json. So a symlink (say conftest.py ->
+    reference.py) or a differently cased name (Reference.py) would get through.
+    """
+    task_dir = Path(task_dir)
+    if task_dir.is_symlink():
+        raise UnsafeTask(f"task folder {task_dir.name} is a symlink")
+    for path in task_dir.rglob("*"):
+        name = path.relative_to(task_dir).as_posix()
+        if path.is_symlink():
+            raise UnsafeTask(f"task file {name} is a symlink")
+        if path.name.lower() in GROUND_TRUTH and path.name not in GROUND_TRUTH:
+            raise UnsafeTask(f"task file {name} looks like a ground-truth file")
 
 
 def docker_available() -> bool:
@@ -51,6 +74,7 @@ def run_solution(task_dir: Path, code: str, docker_context: Path, timeout: int =
         raise ValueError("code must be a string")
     if len(code.encode()) > MAX_CODE_BYTES:
         raise ValueError(f"code is larger than {MAX_CODE_BYTES} bytes")
+    check_task_dir(task_dir)
     ensure_image(docker_context)
     with tempfile.TemporaryDirectory() as tmp:
         solution = Path(tmp) / "solution.py"

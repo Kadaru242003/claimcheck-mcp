@@ -94,7 +94,9 @@ class TaskStore:
     def __init__(self, tasks_dir: Path):
         self.tasks_dir = Path(tasks_dir).resolve()
         # claimcheck's loader; only the category is kept, the rest of meta.json is dropped.
-        self._category = {tid: meta["category"] for tid, meta in load_tasks(self.tasks_dir).items()}
+        # A task folder that is a symlink could point anywhere, so it is left out.
+        self._category = {tid: meta["category"] for tid, meta in load_tasks(self.tasks_dir).items()
+                          if not (self.tasks_dir / tid).is_symlink()}
 
     def task_dir(self, task_id: str) -> Path:
         if not isinstance(task_id, str) or task_id not in self._category:
@@ -105,17 +107,25 @@ class TaskStore:
         if name not in VISIBLE_FILES:
             raise PermissionError(f"{name} is not visible to agents")
         folder = self.task_dir(task_id)
-        path = (folder / name).resolve()
-        # Refuse symlinks or anything else that would lead outside the task folder.
-        if path.parent != folder or path.name in HIDDEN:
+        link = folder / name
+        path = link.resolve()
+        # Refuse symlinks (even to a sibling: it could be Reference.py) and anything that
+        # resolves outside the task folder.
+        if link.is_symlink() or path.parent != folder or path.name.lower() in HIDDEN:
             raise PermissionError(f"{name} is not visible to agents")
         return path.read_text() if path.is_file() else ""
 
     def list(self, category: str | None = None) -> list[dict]:
         if category is not None and category not in CATEGORIES:
             raise ValueError(f"category must be one of {', '.join(CATEGORIES)}")
-        return [{"task_id": tid, "description": _description(self._read(tid, "task.md"))}
+        return [{"task_id": tid, "description": self._summary(tid)}
                 for tid, cat in sorted(self._category.items()) if category is None or cat == category]
+
+    def _summary(self, task_id: str) -> str:
+        try:
+            return _description(self._read(task_id, "task.md"))
+        except PermissionError:  # one refused task.md must not break the whole listing
+            return ""
 
     def get(self, task_id: str) -> dict:
         self.task_dir(task_id)
