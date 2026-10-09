@@ -41,15 +41,21 @@ claimcheck checkout instead, set `CLAIMCHECK_DIR` to its path.
 
 - Only the files `task.md`, `solution_stub.py` and `test_task.py` can be read. Any other file
   name is refused.
-- A task id must exactly match a known task. Paths such as `s019/reference.py` or `../s019`
-  are rejected.
-- A visible file that is a symlink to a hidden file or to anything outside the task folder is
-  refused.
+- A task id must exactly match the name of a known task folder. Anything else is rejected
+  before a file is touched: paths such as `s019/reference.py`, `../s019` or `s019/..`,
+  absolute paths, a different letter case (`S019`), extra spaces, null bytes, or
+  look-alike Unicode characters.
+- Symlinks are never followed. A visible file that is a symlink is refused, and a task folder
+  that is itself a symlink is left out of the task list.
 - `run_solution` uses claimcheck's grader, which leaves `reference.py` and `meta.json` out of
-  the copy mounted into the container. The solution cannot read them.
+  the copy mounted into the container. That copy follows symlinks and skips only those exact
+  names, so before grading the server refuses any task folder containing a symlink or a
+  differently cased `Reference.py` / `META.JSON`. The solution cannot read the answer.
 - `tests/test_hidden.py` plants a secret string in every fake `reference.py` and `meta.json`,
   calls every tool on every task over the MCP protocol, and checks that the secret never
-  appears. It also checks which files the sandbox receives. `tests/test_integration.py` runs
+  appears. It has a test for each trick above (traversal, absolute paths, case, symlinks to
+  the answer, to another task, outside the folder, or as the folder itself) and checks which
+  files the sandbox receives. `tests/test_integration.py` runs
   the same check on all 205 real tasks.
 
 Note: filtering `list_tasks` by category shows whether a task can be solved. If you are
